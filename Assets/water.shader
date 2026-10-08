@@ -1,6 +1,6 @@
 Shader "Unlit/water"
 {
-      Properties
+    Properties
     {
         _MainColor ("Water Color", Color) = (0, 0.5, 1, 1)
         _WaveColor ("Wave Color", Color) = (0.2, 0.8, 1, 1)
@@ -10,63 +10,79 @@ Shader "Unlit/water"
 
     SubShader
     {
-        Tags { "RenderType"="Opaque" }
-        LOD 100
+        Tags
+        {
+            "RenderType"="Opaque"
+            "Queue"="Geometry"
+            "RenderPipeline"="UniversalPipeline"
+        }
 
         Pass
         {
-            CGPROGRAM
+            Name "UniversalForward"
+            Tags { "LightMode"="UniversalForward" }
+
+            HLSLPROGRAM
+
             #pragma vertex vert
             #pragma fragment frag
 
-            #include "UnityCG.cginc"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
-            struct appdata
+            struct Attributes
             {
-                float4 vertex : POSITION;
+                float4 positionOS : POSITION;
                 float2 uv : TEXCOORD0;
             };
 
-            struct v2f
+            struct Varyings
             {
+                float4 positionHCS : SV_POSITION;
                 float2 uv : TEXCOORD0;
-                float4 vertex : SV_POSITION;
             };
 
-            float4 _MainColor;
-            float4 _WaveColor;
-            float _Speed;
-            float _WaveScale;
+            CBUFFER_START(UnityPerMaterial)
 
-            v2f vert (appdata v)
+                float4 _MainColor;
+                float4 _WaveColor;
+                float _Speed;
+                float _WaveScale;
+
+            CBUFFER_END
+
+            Varyings vert(Attributes IN)
             {
-                v2f o;
+                Varyings OUT;
 
-                o.vertex = UnityObjectToClipPos(v.vertex);
-                o.uv = v.uv;
+                OUT.positionHCS = TransformObjectToHClip(IN.positionOS.xyz);
+                OUT.uv = IN.uv;
 
-                return o;
+                return OUT;
             }
 
-            fixed4 frag (v2f i) : SV_Target
+            half4 frag(Varyings IN) : SV_Target
             {
-                // Move the UV coordinates over time
-                float2 uv = i.uv;
+                // Get the UV coordinates
+                float2 uv = IN.uv;
+
+                // Move the wave over time
                 uv.x += _Time.y * _Speed;
 
-                // Create a simple wave pattern
+                // Create the wave
                 float wave = sin(uv.x * _WaveScale);
 
-                // Convert the wave into a 0-1 value
+                // Convert the wave from -1 to 1 into 0 to 1
                 wave = wave * 0.5 + 0.5;
 
-                // Blend between the two water colors
-                fixed4 water = lerp(_MainColor, _WaveColor, wave);
+                // Blend the two water colors
+                half4 water = lerp(_MainColor, _WaveColor, wave);
 
                 return water;
             }
 
-            ENDCG
+            ENDHLSL
         }
     }
+
+    FallBack Off
 }
