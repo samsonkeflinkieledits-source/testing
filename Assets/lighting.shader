@@ -1,4 +1,6 @@
+Shader "Unlit/lighting"
 {
+
     Properties
     {
         _BaseColor ("Base Color", Color) = (1, 1, 1, 1)
